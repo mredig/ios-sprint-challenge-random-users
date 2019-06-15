@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import NetworkHandler
 
 class RandoDetailViewController: UIViewController {
 
@@ -22,7 +23,8 @@ class RandoDetailViewController: UIViewController {
 			updateViews()
 		}
 	}
-	private var photoFetchOp: PhotoFetchOperation?
+//	private var photoFetchOp: PhotoFetchOperation?
+	private var photoFetchTask: URLSessionDataTask?
 
 	override func viewWillLayoutSubviews() {
 		super.viewWillLayoutSubviews()
@@ -33,8 +35,7 @@ class RandoDetailViewController: UIViewController {
 	}
 
 	private func updateViews() {
-		photoFetchOp?.cancel()
-		photoFetchOp = nil
+		photoFetchTask?.cancel()
 		guard let user = user else { return }
 		loadViewIfNeeded()
 		navigationItem.title = user.fullNameWithTitle
@@ -43,30 +44,18 @@ class RandoDetailViewController: UIViewController {
 		cellButton.setTitle(user.cell, for: .normal)
 		nameLabel.text = user.fullName
 
-		if let imageData = randomUserController?.cache.value(forKey: user.picture.large.hashValue) {
-			userImageView.image = UIImage(data: imageData)
-			return
-		}
+		photoFetchTask = NetworkHandler.default.transferMahDatas(with: user.picture.large.request, usingCache: true, completion: { [weak self] (result: Result<Data, NetworkError>) in
+			DispatchQueue.main.async {
+				do {
+					let data = try result.get()
+					self?.userImageView.image = UIImage(data: data)
+				} catch {
+					let alert = UIAlertController(error: error)
+					self?.present(alert, animated: true)
+				}
+			}
+		})
 
-		let tQueue = OperationQueue()
-		tQueue.name = UUID().uuidString
-
-		photoFetchOp = PhotoFetchOperation(photoURL: user.picture.large)
-		let cacheOp = BlockOperation { [weak self] in
-			guard let imageData = self?.photoFetchOp?.imageData else { return }
-			self?.randomUserController?.cache.cache(value: imageData, forKey: user.picture.large.hashValue)
-		}
-		let completionOp = BlockOperation { [weak self] in
-			defer { self?.photoFetchOp = nil }
-			guard let imageData = self?.photoFetchOp?.imageData else { return }
-			self?.userImageView.image = UIImage(data: imageData)
-		}
-
-		guard let photoFetchOp = photoFetchOp else { return }
-		cacheOp.addDependency(photoFetchOp)
-		completionOp.addDependency(photoFetchOp)
-		tQueue.addOperations([photoFetchOp, cacheOp], waitUntilFinished: false)
-		OperationQueue.main.addOperation(completionOp)
 	}
 
 	@IBAction func emailButtonPressed(_ sender: UIButton) {

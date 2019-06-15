@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import NetworkHandler
 
 
 class RandomUserController {
@@ -16,7 +17,6 @@ class RandomUserController {
 		}
 	}
 	private(set) var sectionedUsers = [[RandomUser]]()
-	let cache = Cache<Int, Data>()
 
 	var userRequestCount = 1000
 	private let baseURL = URL(string: "https://randomuser.me/api/")!

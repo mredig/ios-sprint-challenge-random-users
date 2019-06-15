@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import NetworkHandler
 
 class RandoTableViewController: UITableViewController {
 	let randomUserController = RandomUserController()
